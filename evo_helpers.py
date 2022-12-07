@@ -61,7 +61,7 @@ def get_dbs():
     """This function requires the databases paths from 
     the user.
     """
-    central_db = input("\n Enter path to the file that contains the central_DB: ")
+    central_db = input("\n Enter path to the directory that contains the central_DB: ")
     genomes_db = input("\n Enter path to the directory that contains the genomes_DB (.faa and .txt files): ")
     rast_ids = input("\n Enter path to the file rast.ids: ")
     nat_prods_db = input("\n Enter path to the directory that contains the nat_prods_DB: ")
@@ -277,7 +277,10 @@ def makeblast_db(path_input_db):
     aux = [x for x in os.listdir(path_input_db) if ".fasta" in x]
     
     input_db = path_input_db + aux[0]
-    output_name = CTS.BLASTDBs_PATH + aux[0].replace(".fasta", "") + "_BlastDB"
+    
+    output_name = (CTS.BLASTDBs_PATH + aux[0].replace(".fasta", "")+
+                   "_blastdb/"+aux[0].replace(".fasta", "") + "_blastdb")
+    #print(output_name)
     cline_db = NcbimakeblastdbCommandline(cmd = CTS.MAKEBLASTDB_CMD,
                                     dbtype="prot",
                                    input_file= input_db,
@@ -285,6 +288,66 @@ def makeblast_db(path_input_db):
     cline_db()
     return
     
+
+
+###########################   Blastp    #################################
+
+from Bio.Blast.Applications import NcbiblastpCommandline
+
+def apply_blastp(query_path, blastdb_path):
+    """This function applies blastp with query
+    equal to the file with path given by query_path,
+    and blast database in the directory given by
+    blastdb_path.
+    """
+    ## obtaining query name:
+    if query_path.endswith(".fasta"):
+        query_file = query_path
+    else:
+        aux = [x for x in os.listdir(query_path) if ".fasta" in x]
+        query_file = query_path + aux[0]
+    
+    ## obtaining the blastdb's path:
+    blastDB = blastdb_path + blastdb_path.split("/")[-2]
+    
+    
+    ## obtaining output's path:
+    if "central" in aux[0]:
+        output_blastp = (CTS.BLASTp_PATH +
+                         "central_to_genomes/central_to_genomes.blast")
+    elif "evo_genomes_db" in aux[0]:
+        output_blastp = (CTS.BLASTp_PATH +
+                         "genomes_to_central/genomes_to_central.blast")
+    elif "exp_fam" in aux[0]:
+        output_blastp = (CTS.BLASTp_PATH +
+                         "exp_fam_to_nat_prods/exp_fam_to_nat_prods.blast")
+    #print(blastDB)
+    cline_blastp = NcbiblastpCommandline(cmd = CTS.BLASTp_CMD,
+                                     query= query_file,
+                                     db= blastDB,
+                                     evalue=0.0001, 
+                                     remote= False, 
+                                     ungapped=False,
+                                     outfmt = 6,
+                                     max_target_seqs = 10000,
+                                     out = output_blastp)
+    cline_blastp()
+    return 
+
+
+
+################################################################################
+###########################  Helpers to obtain de BBH  #########################
+################################################################################
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,0 +1,22 @@
+{
+  "version": "1.2",
+  "dbname": "evo_genomes_db_blastdb",
+  "dbtype": "Protein",
+  "db-version": 5,
+  "description": "data/data_bases/evo_genomes_db/evo_genomes_db.fasta",
+  "number-of-letters": 30463921,
+  "number-of-sequences": 94150,
+  "last-updated": "2022-12-07T06:22:00",
+  "number-of-volumes": 1,
+  "bytes-total": 50571527,
+  "bytes-to-cache": 31311424,
+  "files": [
+    "evo_genomes_db_blastdb.pdb",
+    "evo_genomes_db_blastdb.phr",
+    "evo_genomes_db_blastdb.pin",
+    "evo_genomes_db_blastdb.pot",
+    "evo_genomes_db_blastdb.psq",
+    "evo_genomes_db_blastdb.ptf",
+    "evo_genomes_db_blastdb.pto"
+  ]
+}
