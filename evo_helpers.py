@@ -1,17 +1,17 @@
 import evo_constants as CTS
-import os
 
-######################## 
-####     function to 
-###  say welcome 
-########################
+
+                ######################## 
+                ####   function to ##
+                ####   say welcome ##
+                ########################
 
 def welcome():
     """ This function presents evomining to the user. 
     """
     print("Welcome to EvoMinig\n")
     input("Press enter to continune ...")
-    
+    return
 
     
     
@@ -71,12 +71,15 @@ def get_dbs():
            "nat_prods" : nat_prods_db }
     return DBs
 
+#####################################################################
+##############################   Functions to obtain ################
+###############################   the headers from     ##############
+###############################  the genomes' files  ###############
+####################################################################
+#####################################################################
 
-################################
-###### Functions to obtain ######
-###### the headers from   ######
-######  the genomes' files  #####
-##############################
+import os
+
 
 def dict_ids_to_names_genomes(file_rast_ids):
     """ This function returns a dictionary with the genome id's as keys
@@ -178,7 +181,7 @@ def make_evo_headers_file(faa_file, txt_file, rast_ids_file):
     peg_keys = [key for key in list(dicc_headers_seqs.keys()) if "peg" in key]
     
     # Path to store the file with the .faa files with evomining headers:
-    evo_header_file = CTS.genomes_EvoFmt + "evo_" + faa_file.split("/")[-1]
+    evo_header_file = CTS.GENOMES_EvoFmt + "evo_" + faa_file.split("/")[-1]
     
     read_file = open(faa_file, 'r')
     write_file = open(evo_header_file, "w")
@@ -193,7 +196,7 @@ def make_evo_headers_file(faa_file, txt_file, rast_ids_file):
             write_file.write(line)
     read_file.close()
     write_file.close()
-
+    return 
 
 def make_all_evo_headers(faa_files_path, rast_ids_file):
     """ This function creates all the .faa files
@@ -209,14 +212,79 @@ def make_all_evo_headers(faa_files_path, rast_ids_file):
         txt_file = faa_files_path + file.split(".")[0] + ".txt"
         
         make_evo_headers_file(faa_file, txt_file, rast_ids_file)
-        
+    return
+    
+## Make the evo_genomes_db: the data base of genomes with 
+## the evomining's headers.
+    
+def join_evo_headers_files():   
+    """This function joins the .faa files that have the evomining's headers
+    in a single file named evo_genomes_db.faa.
+    """
+    files_list = [x for x in os.listdir(CTS.GENOMES_EvoFmt) if ".faa" in x]
+    ## Path to the location of the evo_genomes_db:
+    evo_genomes_db = CTS.EVO_GENOMES_DB + "evo_genomes_db.fasta"
+    
+    with open(evo_genomes_db, "w") as new_file:
+        for file in files_list:
+            name = CTS.GENOMES_EvoFmt + file
+            f = open(name, "r")
+            #with open(name) as f:
+            for line in f:
+                new_file.write(line)
+            f.close()
+                
+    return 
+    
+
+################################################################################
+########################## Delete the files once used ##########################
+################################################################################
+    
+from os import remove
+def remove_evo_headers_files():
+    """This function removes the .faa files
+    used to obtain the evo_genomes_db.faa.
+    """
+    files_list = [x for x in os.listdir(CTS.GENOMES_EvoFmt) if ".faa" in x]
+    for file in files_list:
+        name = CTS.GENOMES_EvoFmt + file
+        remove(name)
+    return
+    
+    
 
     
     
 ####################################################################
 ####################################################################
+#################### Helpers to apply blast ########################
+####################################################################
+####################################################################
+
+import matplotlib.pyplot as plt
 
 
+######################### Makeblastdbs ##############################
+
+from Bio.Blast.Applications import NcbimakeblastdbCommandline
+
+def makeblast_db(path_input_db):
+    """ This function obtains the blastdb of the db passed as 
+    its argument.
+    """
+    
+    aux = [x for x in os.listdir(path_input_db) if ".fasta" in x]
+    
+    input_db = path_input_db + aux[0]
+    output_name = CTS.BLASTDBs_PATH + aux[0].replace(".fasta", "") + "_BlastDB"
+    cline_db = NcbimakeblastdbCommandline(cmd = CTS.MAKEBLASTDB_CMD,
+                                    dbtype="prot",
+                                   input_file= input_db,
+                                     out = output_name)
+    cline_db()
+    return
+    
 
 
 

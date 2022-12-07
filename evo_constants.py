@@ -23,6 +23,12 @@ EXMPL_DB = { "central" : EXMPL_CENTRAL_DB,
             "nat_prods" : MIBiG_NAT_PRODS_DB}
 
 
+###################### Path to the genomesDB #######################
+###################### in evomining format #########################
+
+
+EVO_GENOMES_DB = "data/data_bases/evo_genomes_db/"
+
 
 
 ###################################################################
@@ -34,24 +40,33 @@ EXMPL_DB = { "central" : EXMPL_CENTRAL_DB,
 # This directory will contain the auxiliary files 
 # to obtain the genomes .faa files with the evomining format:
         
-genomes_EvoFmt = "data/aux_data/genomes_EvoFmt/"  
+GENOMES_EvoFmt = "data/aux_data/genomes_EvoFmt/" 
 
 
 
-
+# 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
 
 ###################################################################
-#########################    Paths to the   #######################
-#########################  commands in the  #######################
-#########################    local blast    #######################
-#########################   installation    #######################
+###################################################################     
+#########################     BLAST     ###########################
+###################################################################
 ###################################################################
 
 ## path to the command for makeblastdb:
-makeblastdb_cmd = "/home/csar/ncbi-blast-2.13.0+/bin/makeblastdb"
+MAKEBLASTDB_CMD = "/home/csar/ncbi-blast-2.13.0+/bin/makeblastdb"
 
 ## path to the command for blastp:
-blastp_cmd = "/home/csar/ncbi-blast-2.13.0+/bin/blastp"
+BLASTP_CMD = "/home/csar/ncbi-blast-2.13.0+/bin/blastp"
+
+
+#################### blastdb's path #########################
+
+BLASTDBs_PATH = "data/data_bases/blast_dbs/"
+
+
+
+
+
 
 
 
