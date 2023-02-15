@@ -46,6 +46,13 @@ EVO_GENOMES_DB = "data/data_bases/evo_genomes_db/"
         
 GENOMES_EvoFmt = "data/aux_data/genomes_EvoFmt/" 
 
+## This directory will contain the auxiliary files
+# to obtain the central_enzimes.txt and ids_to_names_of_orgs.txt files.
+
+BBH_aux_files = "data/aux_data/bbh_aux_files/"
+
+
+
 
 
 

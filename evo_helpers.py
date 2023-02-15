@@ -82,7 +82,7 @@ def get_dbs():
 
 import os
 
-
+#Esta función también se utiliza para obtener los bbh's
 def dict_ids_to_names_genomes(file_rast_ids):
     """ This function returns a dictionary with the genome id's as keys
     and the genome's names as values. The input file_rast_ids is the Rast.ids
@@ -282,7 +282,7 @@ def makeblast_db(path_input_db):
     
     output_name = (CTS.BLASTDBs_PATH + aux[0].replace(".fasta", "")+
                    "_blastdb/"+aux[0].replace(".fasta", "") + "_blastdb")
-    #print(output_name)
+    
     cline_db = NcbimakeblastdbCommandline(cmd = CTS.MAKEBLASTDB_CMD,
                                     dbtype="prot",
                                    input_file= input_db,
@@ -350,33 +350,207 @@ import pandas as pd
     
 
 
+    
+    
+############ Create auxiliary files with the enzimes and organisms information ###########
+def make_central_names_file(central_fasta_file_path):
+    """This function creates a file with the names of all
+    the elements in central_db.
+    """
+    output_path = CTS.BBH_aux_files + "central_enzimes.txt"
+    with open(central_fasta_file_path,"r") as fasta_file:
+        with open(output_path, "w") as output:
+            for line in fasta_file:
+                if ">" in line:
+                    Line = line.split(">")[1]
+                    output.write(Line)
+    return
+    
+    
+##### Create the ids to orgs names auxiliary file
+
+def ids_to_names_genomes_file(file_rast_ids):
+    """ This function returns a file with the genome id's as keys
+    and the genome's names as values. The input file_rast_ids is the Rast.ids
+    file within the genomes' database.
+    """
+    
+    genomes_ids_names_dict = {}
+    output_path = CTS.BBH_aux_files + "ids_to_orgs_names.txt"
+    with open(file_rast_ids, "r") as file:
+        with open(output_path, "w") as output:
+            for line in file:
+                Line = line.split("\t")[1] + "-->" + line.split("\t")[2].rstrip()
+                output.write(Line)
+            
+    return 
+    
+
 
 ################################################################################
 ######################  Helpers to obtain the best hit  ########################
 ######################    from central to organisms      #########################
 ################################################################################
 
-def best_hit_central_to_orgs(blast_file, rast_ids):
+def best_hit_central_to_orgs(blast_file):
     """ This function will obtain the best hit from central to organisms. Its output 
-    is a file with these hits.
+    is a file with these hits. From the output we will obtain the expanded families.
     """
     
     # Charge the dataframe with the blastp file:
     df = pd.read_csv(blast_file, sep = '\t', names = CTS.BLAST_COLS)
+    
+    ### SE NECESITA QUE LOS ARCHIVOS AUXILIARES ESTÉN CREADOS ###
+    #Files with the enzimes and orgs info:
+    
+    # Make a list with the enzimes:
+    central_enzimes_file = CTS.BBH_aux_files + 'central_enzimes.txt'       #Agregar ruta a constantes
+    central_enzimes = []
+    with open(central_enzimes_file, "r") as central_file:
+        for line in central_file:
+            if line:
+                central_enzimes.append(line.rstrip("\n"))
+    
+    
+    # Make a dictionary with the ids and names of organisms:
+    ids_to_orgs_names_file = CTS.BBH_aux_files + 'ids_to_orgs_names.txt'   #Agregar ruta a constantes
+    genomes = dict()
+    with open(ids_to_orgs_names_file, "r") as orgs_file:
+        for line in orgs_file:
+            if line:
+                key = line.split("-->")[0]
+                value = line.split("-->")[1]
+                genomes[key] = value
+    
+    
+    
+    #Define and initialize the output file:
+    
+    # Path to best hits file:
+    
+    central_to_orgs_bh = CTS.BBH_aux_files + "central_to_orgs_BH.uniq"  #Agregar ruta a constantes
+    
+    
+    # Finding the best hit:
+    best_hits_file = open(central_to_orgs_bh, "w")
+    for enzime in central_enzimes:
+        for genome_id in genomes.keys():
+            aux_list = []
+            
+            for index in range(len(df)):
+                if (aux_list == []):
+                    if ((enzime == df["query"][index])&(genome_id in df["subject"][index])):
+                        aux_list = list(df.iloc[index])
+                    else:
+                        continue
+                else:
+                    if ((enzime == df["query"][index]) & (genome_id in df["subject"][index]) & (df["bitscore"][index] > aux_list[11])):
+                        aux_list = list(df.iloc[index])
+            if aux_list != []: 
+                line = ["{} ".format(item) for item in aux_list]
+                best_hits_file.writelines(line)
+                best_hits_file.write("\n")
+                
+    best_hits_file.close()
+    return
+    
+################################################################################
+######################  Helpers to obtain the best hit  ########################
+######################    from organisms to central      #########################
+################################################################################
+
+
+def best_hit_orgs_to_central(blast_file):
+    """ This function will obtain the best hit from organisms to central, i.e., 
+    assigns to each position id of a blast hit the corresponding enzime that best 
+    hits in that particular place.
+    """
+    
+    #charge dataframe:
+    df = pd.read_csv(blast_file, sep = '\t', names = CTS.BLAST_COLS, index_col=False)
+    
+    #Obtain dictionary with the copy id position to the line of blast
+    
+    uniq2 = dict()
+    for index in df.index:
+        actual_line = df.iloc[index]
+        copy_id = actual_line["query"].split("|")[1]  #id of the hit position
+        if copy_id in uniq2:
+            if actual_line["bitscore"] > uniq2[copy_id][11]:
+                uniq2[copy_id] = list(actual_line)
+        else:
+            uniq2[copy_id] = list(actual_line)
+    
+    
+    # Write the file with the best hits:
+    
+    orgs_to_central_bh = CTS.BBH_aux_files + "orgs_to_central_BH.uniq"  #Agregar ruta a constantes
+    best_hits_file = open(orgs_to_central_bh, "w")
+     
+    for key in uniq2:
+        line = ["{} ".format(item) for item in uniq2[key]] 
+        best_hits_file.writelines(line)
+        best_hits_file.write("\n")
+    
+    
+    best_hits_file.close()
+    return
+
+
 
 
 ################################################################################
 ###########################  Helpers to obtain de BBH  #########################
 ################################################################################
 
-def best_match(df,qry,sbj):
-    """ This function obtains a dictionary with 
+
+def bbh_detector(central_to_orgs_bhs, orgs_to_central_bhs):
+    """ This function obtains the best bidirectional hits between
+    the blast of central to organisms and organisms to central respectively.
     """
 
+    # charge dataframes:
+    
+    df = pd.read_csv(central_to_orgs_bhs, sep = '\t', names = CTS.BLAST_COLS, index_col = False)
+    
+    df1 = pd.read_csv(orgs_to_central_bhs, sep = '\t', names = CTS.BLAST_COLS, index_col = False)
+    
+    # Write the file with the bbh:
+    
+    BBH_file = CTS.BBH_aux_files + "BBH.bbh"  #Agregar ruta a constantes
+    bbh_file = open(BBH_file, "w")
+     
+    for indx in df1.index:
+        copy_id = df1.iloc[indx]["query"].split("|")[1]
+        enzime = df1.iloc[indx][1]
+        for indxx in df.index:
+            if copy_id not in df.iloc[indxx]["subject"]:
+                continue
+            elif enzime not in df.iloc[indxx]["query"]:
+                continue
+            else:
+                bbh[copy_id] = enzime
+                bbh_file.write(copy_id + " -> ")
+                bbh_file.write(enzime +"\t")
+                bbh_file.write(DF1.iloc[ind]["query"]+"\n")
+           
+    
+    bbh_file.close()
+    return
 
 
 
+#######################################################################################################################
+############################################ Helpers to mark the ######################################################
+###########################################   recruited enzimes ######################################################
+#######################################################################################################################
 
+
+
+##*********************************************************************************************************************
+########################################### Obtain how many copies are ###########################################
+########################################### in each organism            ###########################################
+#*********************************************************************************************************************
 
 
 
