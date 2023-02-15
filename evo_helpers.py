@@ -545,6 +545,16 @@ def bbh_detector(central_to_orgs_bhs, orgs_to_central_bhs):
 ###########################################   recruited enzimes ######################################################
 #######################################################################################################################
 
+def bitscore_filter(dataframe, threshold):
+    """ This function returns a dataframe with only those
+    entries with a bitscore >= threshold.
+    """
+    dataframe.query("bitscore >= @threshold", inplace = True)
+    dataframe.reset_index(drop=True, inplace=True)
+    return dataframe
+
+
+
 
 
 ##*********************************************************************************************************************
@@ -553,9 +563,62 @@ def bbh_detector(central_to_orgs_bhs, orgs_to_central_bhs):
 #*********************************************************************************************************************
 
 
-
-
-
+def copy_count(bistcore_threshold = 100, evalue_threshold = 0.001):
+    """This function returns a dictionary with
+    the family's number of the enzimes as keys. Each key
+    has as a value another dictionary that has as keys the
+    organisms names and as values the list of the copies ids into 
+    this organism of each enzime in the corresponding family.
+    """
+    
+    
+    # charge the dataframe:
+    # blast_file is the path to the blast of central to genomes
+    blast_file = CTS.BLASTp_PATH + '/central_to_genomes/central_to_genomes.blast'
+    df = pd.read_csv(blast_file, sep = '\t', names = CTS.BLAST_COLS, index_col=False)
+    
+    
+    ## Obtain the dictionary of fam to enzimes:
+    queries = df["query"].unique()
+    fam_keys = set([item.split("|")[1] for item in queries])
+    enz_fams = dict()
+    for key in fam_keys:
+        enz_fams[key] = []
+    for qry in queries:
+         for key in fam_keys:
+            if key == qry.split("|")[1]:
+                enz_fams[key].append(qry)
+    
+    ## Obtain the list of organisms ids:
+    orgs_ids_list = list()
+    with open(CTS.BBH_aux_files+"ids_to_orgs_names.txt", "r") as file:
+        for line in file:
+            org_id = line.split("-->")[0]
+            orgs_ids_list.append(org_id)
+    
+    #### Filtering by bitscore and evalue:
+    
+    DF1 = df[(df["bitscore"]>=bitscore_threshold) & (df["e_value"]<= evalue_threshold)]
+    DF1.reset_index(drop=True, inplace=True)
+    
+    #### Obtain the output dictionary:
+    
+    # For the i-th family we obtain a dictionary with the organisms as keys and the position id
+    # of the copies of each element in that family.
+    output = dict()
+    for fam in fam_keys:
+        #output[key] = dict()
+        copies_into = dict()
+        for org in orgs_ids_list:
+            copies_into[org] = []
+        for indx in DF1.index:
+            
+                
+        
+        
+        output[key] = D
+        
+    
 
 
 
