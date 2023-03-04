@@ -98,7 +98,7 @@ def dict_ids_to_names_genomes(file_rast_ids):
 
 def make_EvoHeader(txt_file_line, dict_genome):
     """ This function obtains the headers in the
-    evomining format. The arguments are the header
+    evomining format. The arguments are the headers
     in the .txt file in the genomes db and a
     dictionary of ids to names of the genomes."""
     x = txt_file_line.split('\t')[0:8] 
@@ -117,7 +117,7 @@ def make_EvoHeader(txt_file_line, dict_genome):
 def dict_faaHead_seqLines(faa_file):
     """ This function returns a dictionary
     with the headers in the .faa file of a genome
-    as keys and a list with the potition of the
+    as keys and a list with the position of the
     first and last line of its sequence in the file.
     """
     dict_faaHead_seqlines = dict()
@@ -206,6 +206,7 @@ def make_all_evo_headers(faa_files_path, rast_ids_file):
     """
     faa_files_list = [x for x in os.listdir(faa_files_path) if ".faa" in x]
     
+    
     if not faa_files_path.endswith("/"):
         faa_files_path = faa_files_path + "/" 
         
@@ -221,14 +222,27 @@ def make_all_evo_headers(faa_files_path, rast_ids_file):
     
 def join_evo_headers_files():   
     """This function joins the .faa files that have the evomining's headers
-    in a single file named evo_genomes_db.faa.
+    in a single file named evo_genomes_db.fasta.
     """
     files_list = [x for x in os.listdir(CTS.GENOMES_EvoFmt) if ".faa" in x]
+    #files_list = sorted(files_list, key = lambda t : int(t.split(".")[0].split("_")[1]))  ## 
+    
+    new_files_list = []
+    for file in files_list:
+        old_name = CTS.GENOMES_EvoFmt + file 
+        F = open(old_name, "r")
+        new_file = F.readline().split("|")[2] + ".faa"
+        new_files_list.append(new_file)
+        new_name = CTS.GENOMES_EvoFmt + new_file
+        F.close()
+        os.rename(old_name, new_name)
+    
+    ordered_files_list = sorted(new_files_list, key = lambda t : float(t.split(".faa")[0]))
     ## Path to the location of the evo_genomes_db:
     evo_genomes_db = CTS.EVO_GENOMES_DB + "evo_genomes_db.fasta"
     
     with open(evo_genomes_db, "w") as new_file:
-        for file in files_list:
+        for file in ordered_files_list:
             name = CTS.GENOMES_EvoFmt + file
             f = open(name, "r")
             #with open(name) as f:
@@ -511,9 +525,9 @@ def bbh_detector(central_to_orgs_bhs, orgs_to_central_bhs):
 
     # charge dataframes:
     
-    df = pd.read_csv(central_to_orgs_bhs, sep = '\t', names = CTS.BLAST_COLS, index_col = False)
+    df = pd.read_csv(central_to_orgs_bhs, sep = ' ', names = CTS.BLAST_COLS, index_col = False)
     
-    df1 = pd.read_csv(orgs_to_central_bhs, sep = '\t', names = CTS.BLAST_COLS, index_col = False)
+    df1 = pd.read_csv(orgs_to_central_bhs, sep = ' ', names = CTS.BLAST_COLS, index_col = False)
     
     # Write the file with the bbh:
     
@@ -523,7 +537,7 @@ def bbh_detector(central_to_orgs_bhs, orgs_to_central_bhs):
     for indx in df1.index:
         copy_id = df1.iloc[indx]["query"].split("|")[1]
         enzime = df1.iloc[indx][1]
-        for indxx in df.index:
+        for indxx in list(df.index):
             if copy_id not in df.iloc[indxx]["subject"]:
                 continue
             elif enzime not in df.iloc[indxx]["query"]:
@@ -532,7 +546,7 @@ def bbh_detector(central_to_orgs_bhs, orgs_to_central_bhs):
                 bbh[copy_id] = enzime
                 bbh_file.write(copy_id + " -> ")
                 bbh_file.write(enzime +"\t")
-                bbh_file.write(DF1.iloc[ind]["query"]+"\n")
+                bbh_file.write(df1.iloc[ind]["query"]+"\n")
            
     
     bbh_file.close()
@@ -541,10 +555,13 @@ def bbh_detector(central_to_orgs_bhs, orgs_to_central_bhs):
 
 
 #######################################################################################################################
-############################################ Helpers to mark the ######################################################
-###########################################   recruited enzimes ######################################################
+############################################ Helpers to obtain the ######################################################
+###########################################   expansions and the ######################################################
+###########################################    recruited enzimes ######################################################
 #######################################################################################################################
 
+
+#No se utilizó:
 def bitscore_filter(dataframe, threshold):
     """ This function returns a dataframe with only those
     entries with a bitscore >= threshold.
@@ -604,20 +621,156 @@ def copy_count(bistcore_threshold = 100, evalue_threshold = 0.001):
     #### Obtain the output dictionary:
     
     # For the i-th family we obtain a dictionary with the organisms as keys and the position id
-    # of the copies of each element in that family.
-    output = dict()
+    # of the copies of each member of that family.
+    copies_by_family = dict()
     for fam in fam_keys:
-        #output[key] = dict()
+        
         copies_into = dict()
         for org in orgs_ids_list:
             copies_into[org] = []
         for indx in DF1.index:
+            actual_sbjt = DF1.iloc[indx]["subject"]
+            actual_org = actual_sbjt.split("|")[2]
+            actual_copy = actual_sbjt.split("|")[1]
+            actual_enzm = DF1.iloc[indx]["query"]
+            actual_fam = actual_enzm.split("|")[1]
+            for org in orgs_ids_list: #the last condition is for avoid duplicates
+                if ((actual_fam == fam) & (actual_org == org) & (actual_copy not in copies_into[org])):
+                    copies_into[org].append(actual_copy)
+        for org in orgs_ids_list:
+            if copies_into[org] == []:
+                del copies_into[org]
+        copies_by_family[fam] = copies_into
+    
+    return copies_by_family
+
+
+# obtaining the thresholds for the number of copies present for considering that
+# an expansion event has ocurred. 
+
+###The input is the output of the copy_count function.
+
+def expansion_thresholds(copies_by_fam):
+    """ This function returns a dictionary with the families numbers ids
+    as keys, and the value of each key is a dictionary with the mean, median,
+    mean + std, and mean + 2*std of the number of copies of the members
+    of the family into each organism. 
+    """
+    
+    thresholds_by_family = dict()
+    thresholds_types = ["mean","median", "mean + std", "mean + 2*sdt"]
+    for fam in copies_by_fam:
+        counting_array = np.array([len(copies_by_fam[fam][org]) for org in copies_by_fam[fam] if copies_by_fam[fam][org]!=[]])
+        mean =  counting_array.mean()
+        median = np.median(counting_array)
+        std = counting_array.std()
+        thresholds_by_family[fam] = {"mean": mean,
+                                     "median": median,
+                                    "mean+std": mean+std,
+                                    "mean+2*std": mean + 2*std}
             
                 
+    return thresholds_by_family
+
+
+##################################################################################################################################
+########################################### Selecting the expansions ####################################################
+##################################################################################################################################
         
-        
-        output[key] = D
-        
+def detect_expansions(bitscore_threshold = 100, evalue_threshold=0.001):
+    """ This function returns a dictionary with keys equal to the names
+    of each organism that has expansions, and a list with the positions
+    of the expansion copies as values.
+    """
+    
+    copies_by_family = copy_count(bitscore_threshold, evalue_threshold)
+    
+    expansion_thrlds = expansion_thresholds(copies_by_family)
+    
+    #dictionary of org_ids to org_names:
+    orgs_ids_names = dict()
+    with open(CTS.BBH_aux_files+"ids_to_orgs_names.txt", "r") as file:
+        for line in file:
+            org_id = line.split("-->")[0]
+            org_name = line.split("-->")[1]
+            orgs_ids_names[org_id] = org_name
+    
+    #dictionary with the lengths of the number of copies in each organism by family:
+    number_of_copies = dict()
+    for fam in copies_by_family:
+        leng = dict()
+        for org in copies_by_family[fam]:
+            leng[org] = len(copies_by_family[fam][org])
+        number_of_copies[fam] = leng
+    # obtaining the expansions by criteria:
+    expansions =dict()
+    for fam in copies_by_family:
+        copies = {"mean": [],
+                  "median": [],
+                 "mean+std": [],
+                 "mean+2*std": []}
+        for org in copies_by_family[fam]:
+            if number_of_copies[fam][org]>expansion_thrlds[fam]["mean"]:
+                copies["mean"].append(copies_by_family[fam][org])
+            elif number_of_copies[fam][org]>expansion_thrlds[fam]["median"]:
+                copies["median"].append(copies_by_family[fam][org])
+            elif number_of_copies[fam][org]>expansion_thrlds[fam]["mean+std"]:
+                copies["mean+std"].append(copies_by_family[fam][org])
+            elif number_of_copies[fam][org]>expansion_thrlds[fam]["mean+2*std"]:
+                copies["mean+2*std"].append(copies_by_family[fam][org])
+            else:
+                continue
+        expansions[fam] = copies
+    return expansions
+
+
+########################################################################################################
+################################## Obtaining the expanded families #####################################
+########################################################################################################
+
+def expanded_families(bitscore=100, evalue=0.001, criteria="mean"):
+    """ This function returns the expanded families in the form of a
+    dictionary with the families as keys, and by values has a list with 
+    organisms ids that had expansions.
+    """
+    
+    expansions = detect_expansions(bitscore, evalue)
+    expanded_families = dict()
+    for fam in expansions:
+        if expansions[fam][criteria]:
+            expanded_family_orgs_ids = []
+            for copy_list in expansions[fam][criteria]:
+                numbers_id = copy_list[0].split(".")
+                org_id = numbers_id[0]+numbers_id[1]
+                expanded_family_orgs_ids.append(org_id)
+            expanden_families[fam] = expanded_family_orgs_ids 
+        else:
+             continue 
+    return expanden_families
+  
+
+########################################################################################################
+#####################################  Obtaining the heat map ##########################################
+########################################################################################################
+
+#####################################  ************************     #####################################
+#####################################  * 
+
+
+def heat_map(expansion_dict,criteria):
+    """ This function generates a heat map with the organisms and the number of copies by family.
+    Coloring the cells with the number of copies that correspond to expanded families.
+    """
+    
+    
+    
+    
+
+    
+    
+     
+    
+    
     
 
 
