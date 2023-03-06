@@ -225,7 +225,7 @@ def join_evo_headers_files():
     in a single file named evo_genomes_db.fasta.
     """
     files_list = [x for x in os.listdir(CTS.GENOMES_EvoFmt) if ".faa" in x]
-    #files_list = sorted(files_list, key = lambda t : int(t.split(".")[0].split("_")[1]))  ## 
+    
     
     new_files_list = []
     for file in files_list:
@@ -356,6 +356,24 @@ def apply_blastp(query_path, blastdb_path):
 ####-----------------------------------------------------------------------------------------------------------------------#####
 
 ################################################################################
+####################### Make json files ########################################
+################################################################################
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+################################################################################
 ###################  Helpers to obtain the expanded families  ##################
 ################################################################################
 
@@ -395,7 +413,7 @@ def ids_to_names_genomes_file(file_rast_ids):
         with open(output_path, "w") as output:
             for line in file:
                 Line = line.split("\t")[1] + "-->" + line.split("\t")[2].rstrip()
-                output.write(Line)
+                output.write(Line+"\n")
             
     return 
     
@@ -543,10 +561,10 @@ def bbh_detector(central_to_orgs_bhs, orgs_to_central_bhs):
             elif enzime not in df.iloc[indxx]["query"]:
                 continue
             else:
-                bbh[copy_id] = enzime
+                #bbh[copy_id] = enzime
                 bbh_file.write(copy_id + " -> ")
                 bbh_file.write(enzime +"\t")
-                bbh_file.write(df1.iloc[ind]["query"]+"\n")
+                bbh_file.write(df1.iloc[indx]["query"]+"\n")
            
     
     bbh_file.close()
@@ -723,7 +741,130 @@ def detect_expansions(bitscore_threshold = 100, evalue_threshold=0.001):
         expansions[fam] = copies
     return expansions
 
+##################################################################################################
+    ############################     Version 2  ##########################################
+####################################################################################
 
+import json
+
+def best_hits_blast1(path_blast_1, rast_ids_file):
+    """ This function creates json files with dictionaries that contain the info of the 
+    families (families.json), the ids to names of organisms (orgs_ids_names.json), 
+    a dictionary with the copies of the enzimes of each family into each organism (Dictio_1.json),
+    and a dictionary with the best hit of the copies.
+    """
+    
+    # charge dataframe:
+    df = pd.read_csv(path_blast_1, sep = "\t", names = CTS.BLAST_COLS, index_col = False )
+    
+    #Create dictionary of families to enzimes
+    uniq_qries = df["query"].unique()
+    families = dict()
+    for enz in uniq_qries:
+        fam = enz.split("|")[1]
+        key = "fam_"+fam
+        families[key] = []
+    
+    for enz in uniq_qries:
+        fam = enz.split("|")[1]
+        key = "fam_"+fam
+        families[key].append(enz)
+    
+    
+    fam_file = open(CTS.JSON_FILES_PATH + "families.json", "w")
+    json.dump(families,fam_file)
+    fam_file.close()
+
+    # Create dictionary of orgs_ids_names:
+    orgs_ids_names = dict()
+    rast_file = open(rast_ids_file, "r")
+    for line in rast_file:
+        org_id = line.split("\t")[1]
+        org_name = line.split("\t")[2]
+        orgs_ids_names[org_id] = org_name
+    rast_file.close()
+    
+    orgs_file = open(CTS.JSON_FILES_PATH + "orgs_ids_names.json", "w")
+    json.dump(orgs_ids_names, orgs_file)
+    orgs_file.close()
+    
+    ##### Create Dictionary with the copies by org:
+    
+    # Keys for the dictio
+    keys_dict = []
+    for fam in families:
+        for org in orgs_ids_names:
+            key = fam + "|" + org
+            keys_dict.append(key)
+            
+    #Create dictionary        
+    Dictio = dict()
+    for key in keys_dict:
+        Dictio[key] = dict()
+    
+    for fam in families:
+        for enz in families[fam]:
+            for key in keys_dict:
+                Dictio[key][enz] = []
+    
+    for indx in df.index:
+        if ((df.iloc[indx]["bitscore"]>100) & (df.iloc[indx]["e_value"]<0.001)):
+           
+            fam = "fam_" + df.iloc[indx]["query"].split("|")[1]
+            org = df.iloc[indx]["subject"].split("|")[2]
+            key = fam + "|" + org
+            enz = df.iloc[indx]["query"]
+            enz_num = enz.split("_")[-1].split("|")[0]  # It is important that the enzimes are numered 
+            copy = df.iloc[indx]['subject'].split("|")[1]  
+            bitsc = df.iloc[indx]["bitscore"]
+            #element = [copy, bitsc, enz_num]
+            element = [copy, bitsc, enz_num]
+            Dictio[key][enz].append(element)            
+        else:
+            pass
+
+    dictio_file = open(CTS.JSON_FILES_PATH + "Dictio_1.json", "w")
+    json.dump(Dictio, dictio_file)
+    dictio_file.close()
+    
+    
+    ### Create dictionary with the best hits:
+    
+    Dictio_bh = dict()
+    for key in keys_dict:
+        Dictio_bh[key] = []
+    
+        
+    for org in Dictio:
+        total_copies = []
+        for enzs in Dictio[org]:
+            total_copies += Dictio[org][enzs]
+        Dictio_bh[org] = total_copies
+    
+    for key in Dictio_bh:
+        best_hits = dict()
+        for hit in Dictio_bh[key]:    # hit = [copy_id, bitscore, enz_num]
+            if best_hits.keys() == []:
+                best_hits[hit[0]] = hit  # best_hits ={ copy_id: hit}
+            else:
+                if hit[0] not in best_hits:
+                    best_hits[hit[0]] = hit
+                else:
+                    if hit[1] > best_hits[hit[0]][1]:
+                        best_hits[hit[0]] = hit
+        Dictio_bh[key] = sorted(list(best_hits.values()), key = lambda v : int(v[0].split(".")[-1]))
+    
+    dict_bh_file = open(CTS.JSON_FILES_PATH + "Dictio_bh_ida.json", "w")
+    json.dump(Dictio_bh, dict_bh_file)
+    dict_bh_file.close()
+    
+    return
+    
+    
+
+
+    
+    
 ########################################################################################################
 ################################## Obtaining the expanded families #####################################
 ########################################################################################################

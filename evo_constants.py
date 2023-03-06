@@ -95,3 +95,14 @@ BLAST_COLS = ['query', 'subject','pc_identity', 'aln_length',
 
 
 
+
+################################################################################
+##############################  json files path   ###############################
+################################################################################
+
+FAMILIES = "data/json_files/families.json"
+ORGS_IDS_NMS = "data/json_files/orgs_ids_names.json"
+BH_FRWD = "data/json_files/Dictio_bh_ida.json"
+BH_BCKWD = "data/json_files/Dictio_bh_vuelta.json"
+BBH = "data/json_files/bbh.json"
+
