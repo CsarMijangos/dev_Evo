@@ -797,7 +797,7 @@ def best_hits_blast1(path_blast_1, rast_ids_file):
             key = fam + "|" + org
             keys_dict.append(key)
             
-    #Create dictionary        
+    # Make dictionary   
     Dictio = dict()
     for key in keys_dict:
         Dictio[key] = dict()
