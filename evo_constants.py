@@ -54,7 +54,7 @@ BBH_aux_files = "data/aux_data/bbh_aux_files/"
 
 
 
-
+EXPANDED_FAMS = "/home/csar/Proyectos/Posdoc/Proyecto_pos/dev_package/data/data_bases/exp_fam/"
 
 
 
@@ -100,9 +100,11 @@ BLAST_COLS = ['query', 'subject','pc_identity', 'aln_length',
 ##############################  json files path   ###############################
 ################################################################################
 
+JSON_FILES_PATH = "data/json_files/"
+
 FAMILIES = "data/json_files/families.json"
 ORGS_IDS_NMS = "data/json_files/orgs_ids_names.json"
-BH_FRWD = "data/json_files/Dictio_bh_ida.json"
+EXP_FAMS_JSON = "data/json_files/Dictio_expanded_fams.json"
 BH_BCKWD = "data/json_files/Dictio_bh_vuelta.json"
 BBH = "data/json_files/bbh.json"
 

@@ -802,13 +802,15 @@ def best_hits_blast1(path_blast_1, rast_ids_file):
     for key in keys_dict:
         Dictio[key] = dict()
     
-    for fam in families:
+    
+    for key in keys_dict:
+        fam = key.split("|")[0]
         for enz in families[fam]:
-            for key in keys_dict:
-                Dictio[key][enz] = []
+            Dictio[key][enz] = []
+    
     
     for indx in df.index:
-        if ((df.iloc[indx]["bitscore"]>100) & (df.iloc[indx]["e_value"]<0.001)):
+        if ((df.iloc[indx]["bitscore"]>=100) & (df.iloc[indx]["e_value"]<0.001)):
            
             fam = "fam_" + df.iloc[indx]["query"].split("|")[1]
             org = df.iloc[indx]["subject"].split("|")[2]
@@ -817,12 +819,12 @@ def best_hits_blast1(path_blast_1, rast_ids_file):
             enz_num = enz.split("_")[-1].split("|")[0]  # It is important that the enzimes are numered 
             copy = df.iloc[indx]['subject'].split("|")[1]  
             bitsc = df.iloc[indx]["bitscore"]
-            #element = [copy, bitsc, enz_num]
             element = [copy, bitsc, enz_num]
             Dictio[key][enz].append(element)            
         else:
             pass
-
+    
+    # Make file:
     dictio_file = open(CTS.JSON_FILES_PATH + "Dictio_1.json", "w")
     json.dump(Dictio, dictio_file)
     dictio_file.close()
@@ -854,7 +856,7 @@ def best_hits_blast1(path_blast_1, rast_ids_file):
                         best_hits[hit[0]] = hit
         Dictio_bh[key] = sorted(list(best_hits.values()), key = lambda v : int(v[0].split(".")[-1]))
     
-    dict_bh_file = open(CTS.JSON_FILES_PATH + "Dictio_bh_ida.json", "w")
+    dict_bh_file = open(CTS.JSON_FILES_PATH + "Dictio_expanded_fams.json", "w")
     json.dump(Dictio_bh, dict_bh_file)
     dict_bh_file.close()
     
@@ -889,6 +891,73 @@ def expanded_families(bitscore=100, evalue=0.001, criteria="mean"):
              continue 
     return expanden_families
   
+   
+
+
+
+def obtain_seq_of_expFam(evo_db_path):
+    """This function returns files with sequences of the copies in each
+    organism. One file by each family of central enzimes that undergoes expansions.
+    """
+    import json
+    
+    ## Issue: REvisar si los archivos ya existen!!
+    input_file = open(evo_db_path, "r")
+    output_path = CTS.EXPANDED_FAMS
+    input_file.seek(0,2)
+    file_size = input_file.tell()
+    input_file.seek(0)
+    
+    dictio_file = open(CTS.EXP_FAMS_JSON, "r")
+    dictio_copies = json.load(dictio_file)
+    dictio_file.close()
+    
+    orgs_file = open(CTS.ORGS_IDS_NMS, "r")
+    orgs_dict = json.load(orgs_file)
+    orgs_ids = list(orgs_dict.keys())
+    orgs_file.close()
+    
+    fams_file = open(CTS.FAMILIES, "r")
+    fams_dict = json.load(fams_file)
+    families = list(fams_dict.keys())
+    fams_file.close()
+    
+    sorted_orgs = sorted(orgs_ids, key = float)
+    sorted_families = sorted(families, key= lambda f : int(f.split("_")[1]))
+    
+    
+    for fam in sorted_families:
+        output_file = open(output_path+fam+".fasta", "a")
+        for org in sorted_orgs:
+            key = fam + "|" + org
+            
+            #return print(key)
+            for copies_info in dictio_copies[key]:
+                copy_id = copies_info[0]
+                
+                ptrn = ">gi|" + copy_id
+                line = input_file.readline()
+                #for line in input_file:
+                while line:
+                    if ptrn in line:
+                        ptrn = ""
+                        output_file.write(line)
+                        next_line = input_file.readline()
+                        while(">gi" not in next_line):
+                            output_file.write(next_line)
+                            next_line = input_file.readline()
+                        break
+                    if (input_file.tell() == file_size) & (ptrn != ''):
+                        input_file.seek(0)
+                        line = input_file.readline()
+                        continue
+                    line = input_file.readline()
+                    
+        output_file.close()        
+    input_file.close()
+    
+    return 
+
 
 ########################################################################################################
 #####################################  Obtaining the heat map ##########################################
