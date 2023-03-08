@@ -1126,4 +1126,34 @@ def obtain_bgcs():
             print(li+"\n")
             print(bgc_recruited)
     return 
+
+
+
+###############################################################################################################
+##################################### Muscle Alignment ########################################################
+#####################################                  #####################################
+##########################################################################
+
+def apply_muscle():
+    """ This function alignes the sequences of the expanded families + mibig recruits.
+    """
     
+    import subprocess
+
+    expanded_families_files = [x for x in os.listdir(CTS.EXPANDED_FAMS) if x.endswith(".fasta")]
+    
+    for exp_fam in expanded_families_files:
+        in_file = CTS.EXPANDED_FAMS + exp_fam
+        out_file = CTS.MUSCLE_OUTPUT + "MUSCLE_" + exp_fam
+        subprocess.run([CTS.MUSCLE_EXE, "-align", in_file, "-output", out_file])
+    return 
+        
+        
+        
+############################################################################################################
+###################################### OBTAIN THE TREES ######################################################
+############################################################################################################
+
+def make_tree():
+    
+        

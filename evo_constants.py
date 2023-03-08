@@ -108,3 +108,15 @@ EXP_FAMS_JSON = "/home/csar/Proyectos/Posdoc/Proyecto_pos/dev_package/"+"data/js
 BH_BCKWD = "/home/csar/Proyectos/Posdoc/Proyecto_pos/dev_package/"+"data/json_files/Dictio_bh_vuelta.json"
 BBH = "/home/csar/Proyectos/Posdoc/Proyecto_pos/dev_package/"+"data/json_files/bbh.json"
 
+
+
+
+#################### #################### #################### #################### ####################
+#################### ####################       MUSCLE         #################### ####################
+#################### #################### #################### #################### ####################
+
+from Bio.Align.Applications import MuscleCommandline
+MUSCLE_EXE = "/home/csar/muscle_v5/muscle5.1.linux_intel64"
+
+MUSCLE_OUTPUT = "/home/csar/Proyectos/Posdoc/Proyecto_pos/dev_package/data/data_bases/tree_files/"
+
