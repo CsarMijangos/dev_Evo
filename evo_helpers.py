@@ -330,15 +330,20 @@ def apply_blastp(query_path, blastdb_path):
     
     
     ## obtaining output's path:
-    if "central" in aux[0]:
+    
+    #if "central" in aux[0]:
+    if "central.fasta" in query_file:
         output_blastp = (CTS.BLASTp_PATH +
                          "central_to_genomes/central_to_genomes.blast")
-    elif "evo_genomes_db" in aux[0]:
+    #elif "evo_genomes_db" in aux[0]:
+    elif "evo_genomes_db.fasta" in query_file:
         output_blastp = (CTS.BLASTp_PATH +
                          "genomes_to_central/genomes_to_central.blast")
-    elif "exp_fam" in aux[0]:
+    elif "expanded_fam" in query_file:
+        input_file = query_file.split("/")[-1].split(".")[0]
+        output_name = input_file.split(".")[0] + "_to_mibig.blast"
         output_blastp = (CTS.BLASTp_PATH +
-                         "exp_fam_to_nat_prods/exp_fam_to_nat_prods.blast")
+                         "exp_fam_to_nat_prods/" + output_name)
     #print(blastDB)
     cline_blastp = NcbiblastpCommandline(cmd = CTS.BLASTp_CMD,
                                      query= query_file,
@@ -353,6 +358,20 @@ def apply_blastp(query_path, blastdb_path):
     return 
 
 
+
+def blast_vs_mibig():
+    """ This function applies blastp with queries the copies in each organism, and 
+    subject the mibig database.
+    """
+    expanded_families_files = [x for x in os.listdir(CTS.EXPANDED_FAMS) if x.endswith(".fasta")]
+    if expanded_families == []:
+        return print("There are no expanded families")
+    else:
+        mibig_db = CTS.BLASTDBs_PATH + "nat_prods_blastdb/"
+        for file in expanded_families_files:
+            query = CTS.EXPANDED_FAMS + file
+            apply_blastp(query, mibig_db)
+        return 
 ####-----------------------------------------------------------------------------------------------------------------------#####
 
 ################################################################################
@@ -728,13 +747,13 @@ def detect_expansions(bitscore_threshold = 100, evalue_threshold=0.001):
                  "mean+std": [],
                  "mean+2*std": []}
         for org in copies_by_family[fam]:
-            if number_of_copies[fam][org]>expansion_thrlds[fam]["mean"]:
+            if number_of_copies[fam][org] > expansion_thrlds[fam]["mean"]:
                 copies["mean"].append(copies_by_family[fam][org])
-            elif number_of_copies[fam][org]>expansion_thrlds[fam]["median"]:
+            elif number_of_copies[fam][org] > expansion_thrlds[fam]["median"]:
                 copies["median"].append(copies_by_family[fam][org])
-            elif number_of_copies[fam][org]>expansion_thrlds[fam]["mean+std"]:
+            elif number_of_copies[fam][org] > expansion_thrlds[fam]["mean+std"]:
                 copies["mean+std"].append(copies_by_family[fam][org])
-            elif number_of_copies[fam][org]>expansion_thrlds[fam]["mean+2*std"]:
+            elif number_of_copies[fam][org] > expansion_thrlds[fam]["mean+2*std"]:
                 copies["mean+2*std"].append(copies_by_family[fam][org])
             else:
                 continue
@@ -891,9 +910,7 @@ def expanded_families(bitscore=100, evalue=0.001, criteria="mean"):
              continue 
     return expanden_families
   
-   
-
-
+  
 
 def obtain_seq_of_expFam(evo_db_path):
     """This function returns files with sequences of the copies in each
@@ -927,7 +944,7 @@ def obtain_seq_of_expFam(evo_db_path):
     
     
     for fam in sorted_families:
-        output_file = open(output_path+fam+".fasta", "a")
+        output_file = open(output_path+"expanded_"+fam+".fasta", "a")
         for org in sorted_orgs:
             key = fam + "|" + org
             
@@ -965,27 +982,148 @@ def obtain_seq_of_expFam(evo_db_path):
 
 #####################################  ************************     #####################################
 #####################################  * 
+def mean_highlighter(x):
+    #style for less than mean
+    style_lt = "background-color: white; color: black; font-weight: bold; border: solid; text-align: center; font-size:1.2em;"
+    #style for greater than mean
+    style_gt = "background-color: #C04000; color: black; font-weight: bold; border: solid; text-align:center;"
+    gt_mean = x > x.mean()
+    return [style_gt if i else style_lt for i in gt_mean]
+
+def median_highlighter(x):
+    style_lt = "background-color: white; color: black; font-weight: bold; border: solid; text-align: center; font-size:1.2em;"
+    style_gt = "background-color: #C04000; color: black; font-weight: bold; border: solid; text-align:center;"
+    gt_median = x > x.mean()
+    return [style_gt if i else style_lt for i in gt_median]
+
+def std_highlighter(x):
+    style_lt = "background-color: white; color: black; font-weight: bold; border: solid; text-align: center; font-size:1.2em;"
+    style_gt = "background-color: #C04000; color: black; font-weight: bold; border: solid; text-align:center;"
+    gt_std = x > x.mean() + x.std()
+    return [style_gt if i else style_lt for i in gt_std]
+
+def std2_highlighter(x):
+    style_lt = "background-color: white; color: black; font-weight: bold; border: solid; text-align: center; font-size:1.2em;"
+    style_gt = "background-color: #C04000; color: black; font-weight: bold; border: solid; text-align:center;"
+    gt_std = x > x.mean() + 2*x.std()
+    return [style_gt if i else style_lt for i in gt_std]
+
+def mode_highlighter(x):
+    import statistics as st
+    style_lt = "background-color: white; color: black; font-weight: bold; border: solid; text-align: center; font-size:1.2em;"
+    style_gt = "background-color: #C04000; color: black; font-weight: bold; border: solid; text-align:center;"
+    gt_mode = x > st.mode(x)
+    return [style_gt if i else style_lt for i in gt_mode]
 
 
-def heat_map(expansion_dict,criteria):
-    """ This function generates a heat map with the organisms and the number of copies by family.
-    Coloring the cells with the number of copies that correspond to expanded families.
+def genomes_highlighter(x):
+    style_genome = "background-color: white; color: black; font-weight: bold; border: solid; text-align: center; font-size:1.2em;"
+    return [style_genome for i in x]
+
+def apply_highlighter2(DF_heat,function, style_highlighter, headers_style):
+    return DF_heat.style.apply(function,subset=["fam_1", "fam_2"]).apply(style_highlighter, subset="orgs_ids").hide(axis="index").set_table_styles([headers_style], overwrite = False)
+
+
+def make_heat_map(criteria):
+    import json
+    
+    json_file_Expfams = open(CTS.EXP_FAMS_JSON, "r")
+    exp_fam_dictio = json.load(json_file_Expfams)
+    json_file_Expfams.close()
+    
+    json_file_org = open(CTS.ORGS_IDS_NMS, "r")
+    orgs_ids_dict = json.load(json_file_org)
+    orgs_ids_list = list(orgs_ids_dict.keys())
+    json_file_org.close()
+    
+    json_file_fams = open(CTS.FAMILIES, "r")
+    fams_dict = json.load(json_file_fams)
+    families = list(fams_dict.keys())
+    json_file_fams.close()
+    
+    Dictio_DF = {"orgs_ids": orgs_ids_list}
+    for fam in families:
+        Dictio_DF[fam] = []
+    for org in Dictio_DF["orgs_ids"]:
+        for key in exp_fam_dictio:
+            if org in key:
+                fmly = key.split("|")[0]
+                Dictio_DF[fmly].append(len(exp_fam_dictio[key]))
+    
+    #Dictio_DF
+    DF_heat = pd.DataFrame.from_dict(Dictio_DF)
+    #for indx in DF_heat.index:
+    #    Id = DF_heat["organisms"][indx]
+    #    DF_heat.at[indx,"organisms"] = orgs_ids_dict[Id]
+    
+    
+    #DF_heat
+    headers_style = {
+    'selector': 'th.col_heading',
+    'props': "background-color: OldLace; color: black; font-weight: bold; border: solid; text-align: center; font-size:1.2em;"
+    }
+    if criteria == "mean":
+        return apply_highlighter2(DF_heat,mean_highlighter, genomes_highlighter, headers_style)
+    elif criteria == "median":
+        return apply_highlighter2(DF_heat,median_highlighter, genomes_highlighter, headers_style)
+    elif criteria == "mean + std":
+        return apply_highlighter2(DF_heat,std_highlighter, genomes_highlighter, headers_style)
+    elif criteria == "mean + 2*std":
+        return apply_highlighter2(DF_heat,std2_highlighter, genomes_highlighter, headers_style)
+    elif criteria == "mode":
+        return apply_highlighter2(DF_heat,mode_highlighter, genomes_highlighter, headers_style)
+    else: 
+        return print(f"{criteria} is not a valid criteria\n")
+    
+    
+
+    
+    
+##################################### ##################################### #####################################      
+##################################### Obtain the BGC and writing the sequences ##################################### 
+#####################################   to the expanded families files       ##################################### 
+##################################### ##################################### ##################################### 
+    
+    
+def obtain_bgcs():
+    """ This function obtains the bgc that were detected by blast
+    from expanded families to MIBiG.
     """
     
-    
-    
-    
+    blast_files = [x for x in os.listdir(CTS.BLASTp_PATH + "exp_fam_to_nat_prods/") if x.endswith(".blast")]
+    for blst_file in blast_files:
+        blast_path = "/home/csar/Proyectos/Posdoc/Proyecto_pos/dev_package/data/data_bases/blastp/exp_fam_to_nat_prods/"
 
-    
-    
-     
-    
-    
-    
-
-
-
-
-
-
+        df = pd.read_csv(blast_path + blst_file,sep = '\t', names = CTS.BLAST_COLS, index_col = False)
+        bgc_recruited = list(df[df["bitscore"]>100]["subject"].unique())
+        bgc_recruited.sort()
+        
+        output_file_name = CTS.EXPANDED_FAMS + blst_file.split("_to_")[0]+ ".fasta"
+        mibig_db = CTS.MIBiG_NAT_PRODS_DB + "nat_prods.fasta"
+        
+        mibig_file = open(mibig_db, "r")
+        out_file = open(output_file_name, "a")
+        for line in mibig_file:
+            li = line.strip()
+            if ">" in li:
+                li = li.split(">")[1]
+            if li in bgc_recruited:
+                #print("Se imprimio una línea\n")
+                out_file.write(line)
+                next_line = mibig_file.readline()
+                out_file.write(next_line)
+                bgc_recruited.remove(li)
+            if bgc_recruited == []:
+                #print(f"Se imprimieron todas las líneas del {blst_file}\n")
+                out_file.close()
+                mibig_file.close()
+                break
+                 
+        if bgc_recruited != []:
+            out_file.close()
+            mibig_file.close()
+            print(f"Algo salió mal con {blst_file} \n")
+            print(li+"\n")
+            print(bgc_recruited)
+    return 
     

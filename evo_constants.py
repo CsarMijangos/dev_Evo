@@ -20,7 +20,7 @@ EXMPL_RAST_IDS = ("/home/csar/Proyectos/Posdoc/Proyecto_pos/dev_package/" +
 MIBiG_NAT_PRODS_DB = ("/home/csar/Proyectos/Posdoc/Proyecto_pos/dev_package/" +
                     "data/data_bases/example/mibig/")
 
-##Dictionary with the all the paths:
+##Dictionary with all the paths:
 EXMPL_DB = { "central" : EXMPL_CENTRAL_DB,
             "genomes" : EXMPL_GENOMES_DB,
             "rast_ids" : EXMPL_RAST_IDS,
@@ -102,9 +102,9 @@ BLAST_COLS = ['query', 'subject','pc_identity', 'aln_length',
 
 JSON_FILES_PATH = "data/json_files/"
 
-FAMILIES = "data/json_files/families.json"
-ORGS_IDS_NMS = "data/json_files/orgs_ids_names.json"
-EXP_FAMS_JSON = "data/json_files/Dictio_expanded_fams.json"
-BH_BCKWD = "data/json_files/Dictio_bh_vuelta.json"
-BBH = "data/json_files/bbh.json"
+FAMILIES = "/home/csar/Proyectos/Posdoc/Proyecto_pos/dev_package/"+"data/json_files/families.json"
+ORGS_IDS_NMS = "/home/csar/Proyectos/Posdoc/Proyecto_pos/dev_package/"+"data/json_files/orgs_ids_names.json"
+EXP_FAMS_JSON = "/home/csar/Proyectos/Posdoc/Proyecto_pos/dev_package/"+"data/json_files/Dictio_expanded_fams.json"
+BH_BCKWD = "/home/csar/Proyectos/Posdoc/Proyecto_pos/dev_package/"+"data/json_files/Dictio_bh_vuelta.json"
+BBH = "/home/csar/Proyectos/Posdoc/Proyecto_pos/dev_package/"+"data/json_files/bbh.json"
 
