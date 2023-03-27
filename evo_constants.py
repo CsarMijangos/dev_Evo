@@ -120,3 +120,8 @@ MUSCLE_EXE = "/home/csar/muscle_v5/muscle5.1.linux_intel64"
 
 MUSCLE_OUTPUT = "/home/csar/Proyectos/Posdoc/Proyecto_pos/dev_package/data/data_bases/tree_files/"
 
+FastTree_EXE = "/home/csar/Fast_Tree/FastTree"
+
+####################################################################################################
+########################################    ETE   ##################################################
+

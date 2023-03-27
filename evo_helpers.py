@@ -1148,11 +1148,39 @@ def apply_muscle():
         subprocess.run([CTS.MUSCLE_EXE, "-align", in_file, "-output", out_file])
     return 
         
-        
-        
+
+def obtain_tree():
+    """This function returns a tree file with the aligned fasta. 
+    """ 
+    from Bio.Phylo.Applications import _Fasttree
+    #import subprocess
+     
+    aligned_fastas = [x for x in os.listdir(CTS.MUSCLE_OUTPUT) if x.endswith(".fasta")]
+
+    for aligned_fasta in aligned_fastas:
+        in_file = CTS.MUSCLE_OUTPUT + aligned_fasta
+        out_file = CTS.MUSCLE_OUTPUT + "TREE_" + aligned_fasta
+        cmd = _Fasttree.FastTreeCommandline(CTS.FastTree_EXE, input = in_file, out = out_file)
+        cmd()
+        #subprocess.run([CTS.MUSCLE_EXE, "muscle -maketree -in %s -output %s" %(in_file, out_file)])
+        #subprocess.run([CTS.FastTree_EXE, "FastTree out",out_file, in_file])
+    return 
 ############################################################################################################
-###################################### OBTAIN THE TREES ######################################################
+###################################### VIEW THE TREES ######################################################
 ############################################################################################################
 
-def make_tree():
-      
+def tree_view():
+    """ This function shows the tree from the newick format file obtained with
+    the obtain_tree function.
+    """
+    from ete3 import PhyloTree, TreeStyle
+    
+    tree_files = [x for x in os.listdir(CTS.MUSCLE_OUTPUT) if (x.startswith("TREE") and x.endswith(".fasta"))]
+    for t in tree_files:
+        algt_file = t.split("TREE_")[1]
+        tree_obj = PhyloTree(t, alignment = algt_file, alg_format = "fasta")
+        ts = TreeStyle()
+        t.show(tree_style = ts)
+    return 
+
+
