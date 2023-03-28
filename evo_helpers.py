@@ -1086,8 +1086,9 @@ def make_heat_map(criteria):
     
     
 def obtain_bgcs():
-    """ This function obtains the bgc that were detected by blast
-    from expanded families to MIBiG.
+    """ This function obtains the bgc's that were detected by blast
+    from expanded families to MIBiG, and add the sequences of these bgc's 
+    to the file of the correspondent expanded family.
     """
     
     blast_files = [x for x in os.listdir(CTS.BLASTp_PATH + "exp_fam_to_nat_prods/") if x.endswith(".blast")]
@@ -1108,13 +1109,13 @@ def obtain_bgcs():
             if ">" in li:
                 li = li.split(">")[1]
             if li in bgc_recruited:
-                #print("Se imprimio una línea\n")
+                
                 out_file.write(line)
                 next_line = mibig_file.readline()
                 out_file.write(next_line)
                 bgc_recruited.remove(li)
             if bgc_recruited == []:
-                #print(f"Se imprimieron todas las líneas del {blst_file}\n")
+                
                 out_file.close()
                 mibig_file.close()
                 break
@@ -1127,6 +1128,53 @@ def obtain_bgcs():
             print(bgc_recruited)
     return 
 
+def rename_headers():
+    """ This function obtains a dictionary with the headers of the sequences in the 
+    expanded families files as keys, and IDs for these headers as values. 
+    Also renames the headers of the sequences in the expanded families files with these
+    IDs.
+    """
+    import os 
+    import shutil
+    import fileinput
+    import json 
+
+    expanded_fams = [x for x in os.listdir(CTS.EXPANDED_FAMS) if (x.startswith("expanded") and x.endswith(".fasta"))]
+    OUT_DIR = CTS.MUSCLE_OUTPUT + "aux/"
+    #if OUT_DIR not in os.listdir(CTS.MUSCLE_OUTPUT):
+    #    os.mkdir(OUT_DIR)
+    
+    for Fl in expanded_fams:
+        shutil.copy(CTS.EXPANDED_FAMS + Fl, OUT_DIR)
+    
+    copies_fams = [x for x in os.listdir(OUT_DIR) if (x.startswith("expanded") and x.endswith(".fasta"))]
+    for exp_fm in copies_fams:
+        tree_ids = dict()
+        
+        with fileinput.FileInput(OUT_DIR + exp_fm, inplace = True, backup= ".bak") as file:
+            count_cpy = 0
+            count_bgc = 0
+            for line in file:
+                if ">gi" in line:
+                    count_cpy += 1
+                    value = ">copy_" + str(count_cpy)
+                    tree_ids[line] = value
+                    print(value, end = '\n')
+                elif ">BGC" in line:
+                    count_bgc += 1
+                    value = ">bgc_" + str(count_bgc) 
+                    tree_ids[line] = value
+                    print(value, end = '\n')
+                else:
+                    print(line, end = "")
+        fam = exp_fm.split(".fasta")[0]
+        dict_file = open(OUT_DIR + "dictio_headers"+ fam +"_ids.json", "w")
+        json.dump(tree_ids, dict_file)
+        dict_file.close()
+    return
+
+
+
 
 
 ###############################################################################################################
@@ -1135,19 +1183,23 @@ def obtain_bgcs():
 ##########################################################################
 
 def apply_muscle():
-    """ This function alignes the sequences of the expanded families + mibig recruits.
+    """ This function alignes the sequences of the expanded families + mibig recruited bgcs.
     """
     
     import subprocess
 
-    expanded_families_files = [x for x in os.listdir(CTS.EXPANDED_FAMS) if x.endswith(".fasta")]
+    rename_headers()
+    
+    expanded_families_files = [x for x in os.listdir(CTS.MUSCLE_OUTPUT + "aux/") if x.endswith(".fasta")]
     
     for exp_fam in expanded_families_files:
-        in_file = CTS.EXPANDED_FAMS + exp_fam
-        out_file = CTS.MUSCLE_OUTPUT + "MUSCLE_" + exp_fam
+        in_file = CTS.MUSCLE_OUTPUT + "aux/" + exp_fam
+        out_file = CTS.MUSCLE_OUTPUT + "aux/" + "MUSCLE_" + exp_fam
         subprocess.run([CTS.MUSCLE_EXE, "-align", in_file, "-output", out_file])
     return 
         
+
+
 
 def obtain_tree():
     """This function returns a tree file with the aligned fasta. 
@@ -1155,13 +1207,14 @@ def obtain_tree():
     from Bio.Phylo.Applications import _Fasttree
     #import subprocess
      
-    aligned_fastas = [x for x in os.listdir(CTS.MUSCLE_OUTPUT) if x.endswith(".fasta")]
+    aligned_fastas = [x for x in os.listdir(CTS.MUSCLE_OUTPUT+"aux/") if (x.startswith("MUSCLE") and x.endswith(".fasta"))]
 
     for aligned_fasta in aligned_fastas:
-        in_file = CTS.MUSCLE_OUTPUT + aligned_fasta
-        out_file = CTS.MUSCLE_OUTPUT + "TREE_" + aligned_fasta
+        in_file = CTS.MUSCLE_OUTPUT + "aux/" + aligned_fasta
+        out_file = CTS.MUSCLE_OUTPUT + "TREE_" + aligned_fasta.split(".fasta")[0] + ".txt"
         cmd = _Fasttree.FastTreeCommandline(CTS.FastTree_EXE, input = in_file, out = out_file)
         cmd()
+        
         #subprocess.run([CTS.MUSCLE_EXE, "muscle -maketree -in %s -output %s" %(in_file, out_file)])
         #subprocess.run([CTS.FastTree_EXE, "FastTree out",out_file, in_file])
     return 
@@ -1173,14 +1226,21 @@ def tree_view():
     """ This function shows the tree from the newick format file obtained with
     the obtain_tree function.
     """
-    from ete3 import PhyloTree, TreeStyle
+    from ete3 import Tree, PhyloTree, TreeStyle
     
-    tree_files = [x for x in os.listdir(CTS.MUSCLE_OUTPUT) if (x.startswith("TREE") and x.endswith(".fasta"))]
+    tree_files = [x for x in os.listdir(CTS.MUSCLE_OUTPUT) if (x.startswith("TREE") and x.endswith(".txt"))]
     for t in tree_files:
         algt_file = t.split("TREE_")[1]
-        tree_obj = PhyloTree(t, alignment = algt_file, alg_format = "fasta")
+        tree_obj = Tree(t)
+        #t.link_to_alignment(alignment = algt_file, alg_format = "fasta")
+        #print(t) 
         ts = TreeStyle()
-        t.show(tree_style = ts)
+        ts.show_leaf_name = False
+        ts.mode = "c"
+        ts.arc_start = -180
+        ts.arc_span = 180 
+        outTree = "View_" + CTS.MUSCLE_OUTPUT + t + ".txt"
+        t.write(out_file = outTree,tree_style = ts)
     return 
 
 
